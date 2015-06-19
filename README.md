@@ -9,7 +9,7 @@
 ```
 composer require "itmh/soap-client=0.*"
 ```
-or
+
 ```
 "require": {
     "itmh/soap-client": "0.*"
