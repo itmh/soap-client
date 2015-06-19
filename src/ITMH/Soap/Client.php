@@ -212,7 +212,7 @@ class Client extends SoapClient
      * @throws \ITMH\Soap\Exception\InvalidParameterException
      * @return object
      */
-    public function mapSoapResult(
+    public function asClass(
         $soapResult,
         array $resultClassMap = array(),
         $resultClassNamespace = ''
@@ -490,6 +490,18 @@ class Client extends SoapClient
         }
 
         return $arr;
+    }
+
+    /**
+     * @param $obj
+     *
+     * @return mixed
+     */
+    public function asArray($obj)
+    {
+        $array = $this->objectToArray($obj);
+
+        return reset($array);
     }
 
     /**
