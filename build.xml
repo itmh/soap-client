@@ -3,7 +3,13 @@
 
     <target name="build"
             description="Build project"
-            depends="test"/>
+            depends="install,test"/>
+
+    <target name="install"
+            description="Install composer dependencies">
+        <exec command="composer install --prefer-dist"
+              passthru="true"/>
+    </target>
 
     <target name="test"
             description="Run unit tests">
