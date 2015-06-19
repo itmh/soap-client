@@ -1,0 +1,28 @@
+{
+  "name": "itmh/soap-client",
+  "description": "soap client implementation",
+  "type": "library",
+  "minimum-stability": "stable",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Maxim Chshanovskiy",
+      "email": "chshanovskiy.maxim@itmh.ru"
+    }
+  ],
+  "require": {
+    "php": ">=5.4.0",
+    "lib-curl": "*",
+    "ext-libxml": "*",
+    "ext-soap": "*"
+  },
+  "require-dev": {
+    "phing/phing": "2.*",
+    "codeception/codeception": "2.0.*"
+  },
+  "autoload": {
+    "psr-4": {
+      "ITMH\\": "src/ITMH/"
+    }
+  }
+}

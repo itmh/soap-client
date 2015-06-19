@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="itmh-soap-client" basedir="." default="build">
+
+    <target name="build"
+            description="Build project"
+            depends="test"/>
+
+    <target name="test"
+            description="Run unit tests">
+        <exec command="./vendor/bin/codecept run unit"
+              passthru="true"/>
+    </target>
+
+</project>
