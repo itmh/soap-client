@@ -493,15 +493,16 @@ class Client extends SoapClient
     }
 
     /**
-     * @param $obj
+     * @param      $obj
+     * @param bool $asStrictArray
      *
      * @return mixed
      */
-    public function asArray($obj)
+    public function asArray($obj, $asStrictArray = false)
     {
         $array = $this->objectToArray($obj);
 
-        return reset($array);
+        return $asStrictArray ? $array : reset($array);
     }
 
     /**
