@@ -152,10 +152,9 @@ class Client extends SoapClient
             'Expect:'
         );
 
-        $soapRequest = is_object($request) ?
-            $this->getSoapVariables($request, $this->lowerCaseFirst,
-                $this->keepNullProperties) :
-            $request;
+        $soapRequest = is_object($request)
+            ? $this->getSoapVariables($request, $this->lowerCaseFirst, $this->keepNullProperties)
+            : $request;
 
         $curlOptions = $this->getCurlOptions();
         $curlOptions[CURLOPT_POSTFIELDS] = $soapRequest;
@@ -479,13 +478,17 @@ class Client extends SoapClient
     protected function objectToArray($obj, $keepNullProperties = true)
     {
         $arr = array();
-        $arrObj = is_object($obj) ? get_object_vars($obj) : $obj;
+        $arrObj = is_object($obj)
+            ? get_object_vars($obj)
+            : $obj;
+
         foreach ($arrObj as $key => $val) {
-            $val = (is_array($val) || is_object($val)) ? $this->objectToArray($val,
-                $keepNullProperties) : $val;
+            $val = (is_array($val) || is_object($val))
+                ? $this->objectToArray($val, $keepNullProperties)
+                : $val;
             if ($keepNullProperties || $val !== null) {
                 $val = ($val === null) ? $val = '' : $val;
-                $arr[$key] = is_scalar($val) ? ((string)$val) : $val;
+                $arr[$key] = $val;
             }
         }
 
