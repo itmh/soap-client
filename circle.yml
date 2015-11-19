@@ -1,0 +1,14 @@
+machine:
+  php:
+    version: 5.6.14
+
+dependencies:
+  pre:
+    - sed -i 's/^;//' ~/.phpenv/versions/$(phpenv global)/etc/conf.d/xdebug.ini
+    - echo "xdebug.max_nesting_level = 250" > ~/.phpenv/versions/$(phpenv global)/etc/conf.d/xdebug.ini
+  override:
+    - composer install --prefer-source --no-interaction
+
+test:
+  override:
+    - ./vendor/bin/phing
