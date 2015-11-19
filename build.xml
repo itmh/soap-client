@@ -4,11 +4,11 @@
     <property name="build.dir" value="./build"/>
 
     <target name="build"
-            description="Build project"
+            description="Запуск анализаторов и тестов"
             depends="analyze,test"/>
 
     <target name="analyze"
-            description="Run analyzers"
+            description="Запуск анализаторов кода"
             depends="clean,lint,phpcs,phpmd,pdepend,phploc,phpcpd"/>
 
     <target name="test" depends="clean,test-build"
@@ -23,13 +23,11 @@
                 />
     </target>
 
-    <target name="test-build" depends="init"
-            description="Автогенерация вспомогательных для тестирования файлов">
+    <target name="test-build"
+            description="Автогенерация вспомогательных для тестирования файлов"
+            depends="init">
         <exec passthru="true"
-              command="
-              ${bin.dir}/codecept build
-              "
-                />
+              command="${bin.dir}/codecept build" />
     </target>
 
     <target name="clean"
@@ -53,8 +51,7 @@
         <exec executable="${bin.dir}/parallel-lint"
               passthru="true"
               escape="true">
-            <arg value="--exclude"/>
-            <arg value="./vendor"/>
+            <arg line="--exclude ./vendor"/>
             <arg value="."/>
         </exec>
     </target>
