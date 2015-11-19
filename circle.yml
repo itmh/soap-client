@@ -4,7 +4,7 @@ machine:
 
 dependencies:
   override:
-    - composer install --dev --prefer-dist --no-interaction
+    - composer install --dev --prefer-source --no-interaction
     - pecl install xdebug
     - cat ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini | sed -e "s/;//" > xdebug.ini
     - mv xdebug.ini ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/xdebug.ini
