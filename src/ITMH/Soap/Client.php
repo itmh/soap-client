@@ -53,7 +53,7 @@ class Client extends SoapClient
     protected $contentType;
 
     /**
-     * cURL Options
+     * СURL Options
      *
      * @var array
      */
@@ -118,8 +118,8 @@ class Client extends SoapClient
     /**
      * Constructor
      *
-     * @param string $wsdl
-     * @param array  $options
+     * @param string $wsdl    WSDL url
+     * @param array  $options WSDL options
      */
     public function __construct($wsdl, array $options = array())
     {
@@ -133,6 +133,17 @@ class Client extends SoapClient
 
     /**
      * {@inheritDoc}
+     *
+     * @param string $request  Request parameters
+     * @param string $location URL of Soap Server
+     * @param string $action   Soap method
+     * @param int    $version  Version of SOAP protocol
+     * @param int    $one_way  Unused variable
+     *
+     * @return mixed
+     * @throws \ITMH\Soap\Exception\ConnectionErrorException
+     * @throws \ITMH\Soap\Exception\InvalidParameterException
+     * @throws \RuntimeException
      */
     public function __doRequest(
         $request,
@@ -165,37 +176,43 @@ class Client extends SoapClient
         if (isset($this->soapOptions['login'], $this->soapOptions['password'])) {
             $curlOptions[CURLOPT_USERPWD] = $this->soapOptions['login'] . ':' . $this->soapOptions['password'];
         }
-        $ch = curl_init($location);
-        curl_setopt_array($ch, $curlOptions);
+
+        $curlHandler = curl_init($location);
+        curl_setopt_array($curlHandler, $curlOptions);
         $requestDateTime = new \DateTime();
         try {
-            $response = curl_exec($ch);
-        } catch (\Exception $e) {
+            $response = curl_exec($curlHandler);
+        } catch (\Exception $exception) {
             throw new ConnectionErrorException(
-                'Soap Connection Error: ' . $e->getMessage(),
-                $e->getCode(), $e
+                'Soap Connection Error: ' . $exception->getMessage(),
+                $exception->getCode(),
+                $exception
             );
         }
-        if (curl_errno($ch)) {
+
+        if (curl_errno($curlHandler)) {
             throw new ConnectionErrorException(
-                'Soap Connection Error: ' . curl_error($ch),
-                curl_errno($ch)
+                'Soap Connection Error: ' . curl_error($curlHandler),
+                curl_errno($curlHandler)
             );
         }
+
         if ($response === false) {
             throw new ConnectionErrorException(
                 'Soap Connection Error: Empty Response'
             );
         }
-        $requestMessage = curl_getinfo($ch, CURLINFO_HEADER_OUT) . $soapRequest;
+
+        $requestMessage = curl_getinfo($curlHandler, CURLINFO_HEADER_OUT) . $soapRequest;
         $parsedResponse = $this->parseCurlResponse($response);
         if ($this->debug) {
             $this->logCurlMessage($requestMessage, $requestDateTime);
             $this->logCurlMessage($response, new \DateTime());
         }
+
         $this->communicationLog = $requestMessage . "\n\n" . $response;
         $body = $parsedResponse['body'];
-        curl_close($ch);
+        curl_close($curlHandler);
 
         return $body;
     }
@@ -203,13 +220,15 @@ class Client extends SoapClient
     /**
      * Maps Result XML Elements to Classes
      *
-     * @param \stdClass $soapResult
-     * @param           $rootClassName
-     * @param array     $resultClassMap
-     * @param string    $resultClassNamespace
+     * @param \stdClass $soapResult           SOAP result
+     * @param array     $resultClassMap       Result class map
+     * @param string    $resultClassNamespace Result class namespace
      *
+     * @return mixed
      * @throws \ITMH\Soap\Exception\InvalidParameterException
-     * @return object
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     * @throws \ITMH\Soap\Exception\MissingClassMappingException
+     * @throws \ReflectionException
      */
     public function asClass(
         $soapResult,
@@ -219,6 +238,7 @@ class Client extends SoapClient
         if (!is_object($soapResult)) {
             throw new InvalidParameterException('Soap Result is not an object');
         }
+
         $objVarsNames = array_keys(get_object_vars($soapResult));
         $rootClassName = reset($objVarsNames);
         $soapResultObj = $this->mapObject(
@@ -233,6 +253,13 @@ class Client extends SoapClient
 
     /**
      * {@inheritDoc}
+     *
+     * @param string $name  Cookie name
+     * @param mixed  $value Cookie value
+     *
+     * @return void
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function __setCookie($name, $value = null)
     {
@@ -252,13 +279,17 @@ class Client extends SoapClient
             $cookie .= $name . '=' . $value . '; ';
         }
 
-        return rtrim($cookie, ';');
+        return rtrim($cookie, '; ');
     }
 
     /**
-     * @param bool $strictMapping
+     * Setter for strictMapping
+     *
+     * @param bool $strictMapping Strict mapping flag
      *
      * @return $this
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setStrictMapping($strictMapping = true)
     {
@@ -270,9 +301,11 @@ class Client extends SoapClient
     /**
      * Set cURL Options
      *
-     * @param array $curlOptions
+     * @param array $curlOptions CURL options
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setCurlOptions(array $curlOptions)
     {
@@ -282,11 +315,13 @@ class Client extends SoapClient
     }
 
     /**
-     * Set User Agent
+     * Set User agent
      *
-     * @param string $userAgent
+     * @param string $userAgent User agent
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setUserAgent($userAgent = self::DEFAULT_USER_AGENT)
     {
@@ -296,11 +331,13 @@ class Client extends SoapClient
     }
 
     /**
-     * Set Content Type
+     * Set content type
      *
-     * @param string $contentType
+     * @param string $contentType Content type
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setContentType($contentType = self::DEFAULT_CONTENT_TYPE)
     {
@@ -314,9 +351,11 @@ class Client extends SoapClient
      *
      * Defaults to false
      *
-     * @param boolean $lowerCaseFirst
+     * @param bool $lowerCaseFirst Lower case flag
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setLowerCaseFirst($lowerCaseFirst)
     {
@@ -330,9 +369,11 @@ class Client extends SoapClient
      *
      * Defaults to true
      *
-     * @param boolean $keepNullProperties
+     * @param bool $keepNullProperties Null properties flag
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setKeepNullProperties($keepNullProperties)
     {
@@ -344,9 +385,11 @@ class Client extends SoapClient
     /**
      * Set Debug Mode
      *
-     * @param boolean $debug
+     * @param bool $debug Debug mode flag
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function setDebug($debug = true)
     {
@@ -358,11 +401,13 @@ class Client extends SoapClient
     /**
      * Use Proxy
      *
-     * @param string $host
-     * @param int    $port
-     * @param int    $type
+     * @param string $host Host
+     * @param int    $port Port
+     * @param int    $type Type
      *
      * @return self
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function useProxy(
         $host = self::DEFAULT_PROXY_HOST,
@@ -394,7 +439,7 @@ class Client extends SoapClient
             CURLOPT_SSL_VERIFYPEER => false
         );
 
-        /** @noinspection AdditionOperationOnArraysInspection */
+        /* @noinspection AdditionOperationOnArraysInspection */
         $mergedArray = $mandatoryOptions + $this->curlOptions + $defaultOptions;
 
         if (strlen($this->proxyHost) > 0) {
@@ -402,6 +447,7 @@ class Client extends SoapClient
             if (strlen($this->proxyPort) > 0) {
                 $proxyPort = $this->proxyPort;
             }
+
             $mergedArray[CURLOPT_PROXYTYPE] = $this->proxyType;
             $mergedArray[CURLOPT_PROXY] = $this->proxyHost;
             $mergedArray[CURLOPT_PROXYPORT] = $proxyPort;
@@ -416,9 +462,9 @@ class Client extends SoapClient
      * Prepares request parameters to be
      * sent in the SOAP Request Body.
      *
-     * @param object  $requestObject
-     * @param boolean $lowerCaseFirst     Lowercase first character of the root element name
-     * @param boolean $keepNullProperties Keep null object properties when building the request parameters
+     * @param mixed $requestObject      Request object
+     * @param bool  $lowerCaseFirst     Lowercase first character of the root element name
+     * @param bool  $keepNullProperties Keep null object properties when building the request parameters
      *
      * @throws \ITMH\Soap\Exception\InvalidParameterException
      * @return array
@@ -431,10 +477,12 @@ class Client extends SoapClient
         if (!is_object($requestObject)) {
             throw new InvalidParameterException('Parameter requestObject is not an object');
         }
+
         $objectName = $this->getClassNameWithoutNamespaces($requestObject);
         if ($lowerCaseFirst) {
             $objectName = lcfirst($objectName);
         }
+
         $stdClass = new \stdClass();
         $stdClass->$objectName = $requestObject;
 
@@ -445,6 +493,8 @@ class Client extends SoapClient
      * Get Communication Log of Last Request
      *
      * @return string
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     public function getCommunicationLog()
     {
@@ -454,9 +504,11 @@ class Client extends SoapClient
     /**
      * Get Class Without Namespace Information
      *
-     * @param mixed $object
+     * @param mixed $object Object
      *
      * @return string
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     protected function getClassNameWithoutNamespaces($object)
     {
@@ -470,7 +522,7 @@ class Client extends SoapClient
      *
      * This method omits null value properties
      *
-     * @param mixed   $obj
+     * @param mixed   $obj                Object or array for converting
      * @param boolean $keepNullProperties Keep null object properties when building the request parameters
      *
      * @return array
@@ -478,16 +530,15 @@ class Client extends SoapClient
     protected function objectToArray($obj, $keepNullProperties = true)
     {
         $arr = array();
-        $arrObj = is_object($obj)
-            ? get_object_vars($obj)
-            : $obj;
+        $arrObj = $this->getObjectVars($obj);
 
         foreach ($arrObj as $key => $val) {
-            $val = (is_array($val) || is_object($val))
+            $val = $this->isComplex($val)
                 ? $this->objectToArray($val, $keepNullProperties)
                 : $val;
+
             if ($keepNullProperties || $val !== null) {
-                $val = ($val === null) ? $val = '' : $val;
+                $val = ($val === null) ? '' : $val;
                 $arr[$key] = $val;
             }
         }
@@ -496,8 +547,24 @@ class Client extends SoapClient
     }
 
     /**
-     * @param      $obj
-     * @param bool $asStrictArray
+     * Wrapper for function get_object_vars
+     *
+     * @param mixed $argument Argument
+     *
+     * @return array
+     */
+    protected function getObjectVars($argument)
+    {
+        return is_object($argument)
+            ? get_object_vars($argument)
+            : $argument;
+    }
+
+    /**
+     * Map response as array
+     *
+     * @param mixed $obj           Response instance
+     * @param bool  $asStrictArray Strict flag
      *
      * @return mixed
      */
@@ -516,10 +583,10 @@ class Client extends SoapClient
      * @param array  $classMap       Class Mapping
      * @param string $classNamespace Namespace where the local classes are located
      *
+     * @return mixed
      * @throws \ITMH\Soap\Exception\MissingClassMappingException
      * @throws \ITMH\Soap\Exception\InvalidClassMappingException
      * @throws \ReflectionException
-     * @return mixed
      */
     protected function mapObject(
         $obj,
@@ -527,106 +594,314 @@ class Client extends SoapClient
         $classMap = array(),
         $classNamespace = ''
     ) {
-        if (is_object($obj)) {
 
-            // Check if there is a mapping.
-            if (isset($classMap[$className])) {
-                $mappedClassName = $classMap[$className];
-            } else {
-                if ($classNamespace) {
-                    $mappedClassName = str_replace('\\\\', '\\',
-                        $classNamespace . '\\' . $className);
-                } else {
-                    throw new MissingClassMappingException('Missing mapping for element "' . $className . '"');
-                }
-            }
-
-            // Check if local class exists.
-            if (!class_exists($mappedClassName)) {
-                throw new InvalidClassMappingException('Class not found: "' . $mappedClassName . '"');
-            }
-            // Get class properties and methods.
-            $objProperties = array_keys(get_class_vars($mappedClassName));
-            $objMethods = get_class_methods($mappedClassName);
-
-            // Instantiate new mapped object.
-            $objInstance = new $mappedClassName();
-
-            // Map remote object to local object.
-            $arrObj = get_object_vars($obj);
-            foreach ($arrObj as $key => $val) {
-                if ($val !== null) {
-                    $useSetter = false;
-                    if (in_array('set' . $key, $objMethods, true)) {
-                        $useSetter = true;
-                    } elseif (!in_array($key, $objProperties, true)) {
-                        if ($this->strictMapping === true) {
-                            throw new InvalidClassMappingException('Property "' . $mappedClassName . '::' . $key . '" doesn\'t exist');
-                        }
-                    }
-
-                    // If it's not scalar, recursive call the mapping function
-                    if (is_array($val) || is_object($val)) {
-                        $val = $this->mapObject($val, $key, $classMap,
-                            $classNamespace);
-                    }
-
-                    // If there is a setter, use it. If not, set the property directly.
-                    if ($useSetter) {
-                        $setterName = 'set' . $key;
-
-                        // Check if parameter is \DateTime
-                        $reflection = new \ReflectionMethod($mappedClassName,
-                            $setterName);
-                        $params = $reflection->getParameters();
-                        if (count($params) !== 1) {
-                            throw new InvalidClassMappingException('Wrong Argument Count in Setter for property ' . $key);
-                        }
-                        $param = reset($params);
-                        /* @var $param \ReflectionParameter */
-
-                        // Get the parameter class (if type-hinted)
-                        try {
-                            $paramClass = $param->getClass();
-                        } catch (\ReflectionException $e) {
-                            throw new \ReflectionException('Invalid type hint for method "' . $setterName . '"');
-                        }
-                        if ($paramClass) {
-                            $paramClassName = $paramClass->getNamespaceName() . '\\' . $param->getClass()->getName();
-                            // If setter parameter is typehinted, cast the value before calling the method
-                            if ($paramClassName === '\DateTime') {
-                                $val = new \DateTime($val);
-                            }
-                        }
-
-                        $objInstance->$setterName($val);
-                    } else {
-                        $objInstance->$key = $val;
-                    }
-                }
-            }
-
-            return $objInstance;
-        } elseif (is_array($obj)) {
-            // Value is array.
-            $returnArray = array();
-            // If array mapping exists, map array elements.
-            if (array_key_exists('array|' . $className, $classMap)) {
-                $className = 'array|' . $className;
-                foreach ($obj as $key => $val) {
-                    $returnArray[$key] = $this->mapObject($val, $className,
-                        $classMap, $classNamespace);
-                }
-            } else {
-                // If array mapping doesn't exist, return the array.
-                $returnArray = $obj;
-            }
-
-            return $returnArray;
-        } else {
-            // Value is scalar. Just return it.
+        if (!$this->isComplex($obj)) {
             return $obj;
         }
+
+        if (is_array($obj)) {
+            codecept_debug($obj);
+
+            return $this->mapArray($obj, $className, $classMap, $classNamespace);
+        }
+
+        // Check if there is a mapping.
+        $mappedClassName = $this->getMappedClassName($className, $classMap, $classNamespace);
+
+        // Get class properties and methods.
+        $objProperties = array_keys(get_class_vars($mappedClassName));
+        $objMethods = get_class_methods($mappedClassName);
+
+        // Instantiate new mapped object.
+        $objInstance = new $mappedClassName();
+
+        // Map remote object to local object.
+        $arrObj = get_object_vars($obj);
+        $propertiesMap = $this->getPropertyMap($objInstance);
+        foreach ($arrObj as $key => $val) {
+            if ($val !== null) {
+                if (array_key_exists($key, $propertiesMap)) {
+                    $key = $propertiesMap[$key];
+                }
+
+                $useSetter = $this->hasSetter($key, $objMethods);
+                if (!$useSetter && $this->strictMapping === true && !$this->hasProperty($key, $objProperties)) {
+                    throw new InvalidClassMappingException('Property "' . $mappedClassName . '::' . $key . '" doesn\'t exist');
+                }
+
+                // If it's not scalar, recursive call the mapping function
+                if ($this->isComplex($val)) {
+                    $val = $this->mapObject($val, $key, $classMap, $classNamespace);
+                }
+
+                // If there is a setter, use it. If not, set the property directly.
+                if ($useSetter) {
+                    $this->mapPropertyWithSetter($objInstance, $key, $val, $mappedClassName);
+                } else {
+                    $this->mapProperty($objInstance, $key, $val);
+                }
+            }
+        }
+
+        return $objInstance;
+    }
+
+    /**
+     * Map Remote SOAP response to local classes if response is array
+     *
+     * @param mixed  $data           Remote SOAP Object
+     * @param string $className      Root (or current) class name
+     * @param array  $classMap       Class Mapping
+     * @param string $classNamespace Namespace where the local classes are located
+     *
+     * @return array
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     * @throws \ITMH\Soap\Exception\MissingClassMappingException
+     * @throws \ReflectionException
+     */
+    protected function mapArray($data, $className, $classMap, $classNamespace = '')
+    {
+        // If array mapping exists, map array elements.
+        $className = 'array|' . $className;
+        if (!array_key_exists($className, $classMap)) {
+            return $data;
+        }
+
+        $returnArray = [];
+        foreach ($data as $key => $val) {
+            $returnArray[$key] = $this->mapObject($val, $className, $classMap, $classNamespace);
+        }
+
+        return $returnArray;
+    }
+
+    /**
+     * Get mapped class name
+     *
+     * @param string $className      Root (or current) class name
+     * @param array  $classMap       Class Mapping
+     * @param string $classNamespace Namespace where the local classes are located
+     *
+     * @return mixed
+     * @throws \ITMH\Soap\Exception\MissingClassMappingException
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     */
+    protected function getMappedClassName($className, $classMap, $classNamespace = null)
+    {
+        if (array_key_exists($className, $classMap)) {
+            $mappedClassName = $classMap[$className];
+        } else {
+            if (!$classNamespace) {
+                throw new MissingClassMappingException('Missing mapping for element "' . $className . '"');
+            }
+
+            $mappedClassName = str_replace('\\\\', '\\', $classNamespace . '\\' . $className);
+        }
+
+        // Existence
+        $this->checkClassExistence($className);
+
+        return $mappedClassName;
+    }
+
+    /**
+     * Check class existence
+     *
+     * @param string $className Class name
+     *
+     * @return void
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     */
+    protected function checkClassExistence($className)
+    {
+        if (!class_exists($className)) {
+            throw new InvalidClassMappingException('Class not found: "' . $className . '"');
+        }
+    }
+
+    /**
+     * Check if object has setter method for corresponding property
+     *
+     * @param string $attribute     Attrubute name
+     * @param array  $objectMethods Object methods list
+     *
+     * @return bool
+     */
+    protected function hasSetter($attribute, $objectMethods)
+    {
+        return in_array($this->getSetterName($attribute), $objectMethods, true);
+    }
+
+    /**
+     * Check if object has property
+     *
+     * @param string $attribute        Attrubute name
+     * @param array  $objectProperties Object properties list
+     *
+     * @return bool
+     */
+    protected function hasProperty($attribute, $objectProperties)
+    {
+        return in_array($attribute, $objectProperties, true);
+    }
+
+    /**
+     * Check if object is not scalar type
+     *
+     * @param mixed $variable Scalar or not scalar variable
+     *
+     * @return bool
+     */
+    protected function isComplex($variable)
+    {
+        return is_array($variable) || is_object($variable);
+    }
+
+    /**
+     * Return custom property map for given object
+     *
+     * @param mixed $object Object instance
+     *
+     * @return array
+     */
+    protected function getPropertyMap($object)
+    {
+        return $object instanceof MappingInterface ? $object->getMap() : [];
+    }
+
+    /**
+     * Assign value to property
+     *
+     * @param mixed  $object Instance of object
+     * @param string $key    Property name
+     * @param mixed  $value  Value
+     *
+     * @return void
+     *
+     * @codeCoverageIgnore Not contains logic
+     */
+    protected function mapProperty($object, $key, $value)
+    {
+        $object->$key = $value;
+    }
+
+    /**
+     * Map property to object with setter
+     *
+     * @param mixed  $object          Object for mapping
+     * @param string $key             Attribute name
+     * @param mixed  $value           Attribute value
+     * @param string $mappedClassName Class name of object
+     *
+     * @return void
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     * @throws \ReflectionException
+     *
+     * @codeCoverageIgnore Not contains logic
+     */
+    protected function mapPropertyWithSetter($object, $key, $value, $mappedClassName)
+    {
+        $setterName = $this->getSetterName($key);
+        $value = $this->castParameter($mappedClassName, $key, $value);
+        $object->$setterName($value);
+    }
+
+    /**
+     * Cast the value, if parameter is typehinted
+     *
+     * @param string $mappedClassName Object class name
+     * @param string $key             Attribute name
+     * @param mixed  $value           Value
+     *
+     * @return \DateTime
+     * @throws \ReflectionException
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     * @todo   Make extensible
+     */
+    protected function castParameter($mappedClassName, $key, $value)
+    {
+        $parameter = $this->getSetterParameter($mappedClassName, $key);
+        $parameterClass = $this->getParameterClass($parameter);
+        if ($parameterClass) {
+            $paramClassName = $parameterClass->getNamespaceName() . '\\' . $parameterClass->getName();
+            if ($paramClassName === '\DateTime') {
+                $value = new \DateTime($value);
+            }
+        }
+
+        return $value;
+    }
+
+    /**
+     * Return
+     *
+     * @param string $mappedClassName Object class name
+     * @param string $key             Attribute
+     *
+     * @return \ReflectionParameter
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     */
+    protected function getSetterParameter($mappedClassName, $key)
+    {
+        $reflection = $this->getMethodReflection($mappedClassName, $this->getSetterName($key));
+        $params = $reflection->getParameters();
+        if (count($params) !== 1) {
+            throw new InvalidClassMappingException('Wrong Argument Count in Setter for property ' . $key);
+        }
+
+        return reset($params);
+    }
+
+
+    /**
+     * Return reflection of method
+     *
+     * @param string $className  Class name
+     * @param string $methodName Method name
+     *
+     * @return \ReflectionMethod
+     *
+     * @codeCoverageIgnore Not contains logic
+     */
+    protected function getMethodReflection($className, $methodName)
+    {
+        return new \ReflectionMethod($className, $this->getSetterName($methodName));
+    }
+
+    /**
+     * Get setter name
+     *
+     * @param string $key Attribute name
+     *
+     * @return string
+     *
+     * @codeCoverageIgnore Not contains logic
+     */
+    protected function getSetterName($key)
+    {
+        return 'set' . $key;
+    }
+
+    /**
+     * Get the parameter class (if type-hinted)
+     *
+     * @param \ReflectionParameter $param Setter parameter
+     *
+     * @return \ReflectionClass
+     * @throws \ReflectionException
+     *
+     * @link http://php.net/manual/en/reflectionparameter.getclass.php method not documented.
+     *       I can't reproduce exception.
+     */
+    protected function getParameterClass($param)
+    {
+        try {
+            $paramClass = $param->getClass();
+        } catch (\ReflectionException $exception) {
+            throw new \ReflectionException('Invalid type hint for method "' . $param->getDeclaringFunction() . '"');
+        }
+
+        return $paramClass;
     }
 
     /**
@@ -634,7 +909,7 @@ class Client extends SoapClient
      *
      * Inspired by shuber cURL wrapper.
      *
-     * @param string $response
+     * @param string $response Response
      *
      * @return array
      */
@@ -643,7 +918,7 @@ class Client extends SoapClient
         $pattern = '|HTTP/\d\.\d.*?$.*?\r\n\r\n|ims';
         preg_match_all($pattern, $response, $matches);
         $header = array_pop($matches[0]);
-        # Remove headers from the response body
+        // Remove headers from the response body
         $body = str_replace($header, '', $response);
 
         return [
@@ -655,10 +930,13 @@ class Client extends SoapClient
     /**
      * Log cURL Debug Message
      *
-     * @param string    $message
-     * @param \DateTime $messageTimestamp
+     * @param string    $message          Debug message
+     * @param \DateTime $messageTimestamp Timestamp
      *
+     * @return void
      * @throws \RuntimeException
+     *
+     * @codeCoverageIgnore Not contains logic
      */
     protected function logCurlMessage($message, \DateTime $messageTimestamp)
     {
