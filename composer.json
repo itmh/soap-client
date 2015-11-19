@@ -8,6 +8,10 @@
     {
       "name": "Maxim Chshanovskiy",
       "email": "chshanovskiy.maxim@itmh.ru"
+    },
+    {
+      "name": "Alexander Busygin",
+      "email": "busygin.aleksandr@itmh.ru"
     }
   ],
   "require": {
@@ -18,7 +22,13 @@
   },
   "require-dev": {
     "phing/phing": "~2.0",
-    "codeception/codeception": "~2.0.0"
+    "codeception/codeception": "~2.1.0",
+    "jakub-onderka/php-parallel-lint": "^0.9",
+    "itmh/php-standard": "^0.0.1",
+    "sebastian/phpcpd": "^2.0.2",
+    "phpmd/phpmd": "^2.3.2",
+    "pdepend/pdepend": "^2.2.2",
+    "phploc/phploc": "^2.1.5"
   },
   "autoload": {
     "psr-4": {
