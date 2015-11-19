@@ -11,11 +11,16 @@
             description="Run analyzers"
             depends="clean,lint,phpcs,phpmd,pdepend,phploc,phpcpd"/>
 
-    <target name="test"
-            description="Run unit tests"
-            depends="clean,init,test-build">
-        <exec command="./vendor/bin/codecept run unit"
-              passthru="true"/>
+    <target name="test" depends="clean,test-build"
+            description="Запуск тестов и подсчёт тестового покрытия">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/codecept run unit
+              --xml=report.xml
+              --coverage-xml=coverage.xml
+              --coverage-html=coverage
+              "
+                />
     </target>
 
     <target name="test-build" depends="init"
