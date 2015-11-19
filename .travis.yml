@@ -4,5 +4,8 @@ php:
   - hhvm
   - nightly
 
-before_script: composer install --prefer-source --no-interaction
+before_script:
+  - /home/travis/.phpenv/versions/$(phpenv global)/bin/composer self-update
+  - composer install --prefer-source --no-interaction
+
 script: ./vendor/bin/phing
