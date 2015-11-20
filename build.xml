@@ -1,14 +1,122 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="itmh-soap-client" basedir="." default="build">
+    <property name="bin.dir" value="vendor/bin"/>
+    <property name="build.dir" value="./build"/>
 
     <target name="build"
-            description="Build project"
-            depends="test"/>
+            description="Запуск анализаторов и тестов"
+            depends="analyze,test"/>
 
-    <target name="test"
-            description="Run unit tests">
-        <exec command="./vendor/bin/codecept run unit"
-              passthru="true"/>
+    <target name="analyze"
+            description="Запуск анализаторов кода"
+            depends="clean,lint,phpcs,phpmd,pdepend,phploc,phpcpd"/>
+
+    <target name="test" depends="clean,test-build"
+            description="Запуск тестов и подсчёт тестового покрытия">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/codecept run unit
+              --xml=report.xml
+              --coverage-xml=coverage.xml
+              --coverage-html=coverage
+              "
+                />
     </target>
 
+    <target name="test-build"
+            description="Автогенерация вспомогательных для тестирования файлов"
+            depends="init">
+        <exec passthru="true"
+              command="${bin.dir}/codecept build" />
+    </target>
+
+    <target name="clean"
+            description="Очистка рабочей директории от устаревших артефактов">
+        <delete dir="${build.dir}"/>
+    </target>
+
+    <target name="init"
+            description="Инициализация окружения для сборки">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${build.dir}/logs"/>
+        <mkdir dir="${build.dir}/logs/phpcpd"/>
+        <mkdir dir="${build.dir}/logs/phpcs"/>
+        <mkdir dir="${build.dir}/logs/phpmd"/>
+        <mkdir dir="${build.dir}/logs/pdepend"/>
+        <mkdir dir="${build.dir}/logs/phploc"/>
+        <mkdir dir="${build.dir}/logs/codecept"/>
+    </target>
+
+    <target name="lint">
+        <exec executable="${bin.dir}/parallel-lint"
+              passthru="true"
+              escape="true">
+            <arg line="--exclude ./vendor"/>
+            <arg value="."/>
+        </exec>
+    </target>
+
+    <target name="phpcs" depends="init"
+            description="Проверка файлов на соответствие стандарту кодирования">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/phpcs .
+              --report-checkstyle=${build.dir}/logs/phpcs/report.xml
+              --encoding=UTF-8
+              --standard=./vendor/itmh/php-standard/ITMH
+              --extensions=php
+              --report-summary
+              --report-width=auto
+              --ignore=vendor
+              --ignore=tests
+               "/>
+    </target>
+
+    <target name="phpmd" depends="init"
+            description="Проверка файлов на наличие грязного кода">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/phpmd . xml cleancode,codesize,controversial,design,naming,unusedcode
+              --reportfile ${build.dir}/logs/phpmd/report.xml
+              --exclude vendor,tests
+              "/>
+    </target>
+
+    <target name="pdepend" depends="init"
+            description="Вычисление зависимостей в коде">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/pdepend
+              --suffix=php
+              --summary-xml=${build.dir}/logs/pdepend/report.xml
+              --jdepend-xml=${build.dir}/logs/pdepend/jdepend.xml
+              --jdepend-chart=${build.dir}/logs/pdepend/jdepend-chart.svg
+              --overview-pyramid=${build.dir}/logs/pdepend/overview-pyramid.svg
+              --ignore=vendor,tests
+              .
+              "/>
+    </target>
+
+    <target name="phploc" depends="init"
+            description="Подсчёт размера проекта">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/phploc .
+              --log-xml=${build.dir}/logs/phploc/report.xml
+              --exclude=vendor
+              --exclude=tests
+              "
+                />
+    </target>
+
+    <target name="phpcpd" depends="init"
+            description="Поиск дубликатов кода">
+        <exec passthru="true"
+              command="
+              ${bin.dir}/phpcpd .
+              --log-pmd ${build.dir}/logs/phpcpd/report.xml
+              --exclude=vendor
+              --exclude=test
+              "/>
+    </target>
 </project>
