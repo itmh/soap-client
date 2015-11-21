@@ -116,7 +116,7 @@
               ${bin.dir}/phpcpd .
               --log-pmd ${build.dir}/logs/phpcpd/report.xml
               --exclude=vendor
-              --exclude=test
+              --exclude=tests
               "/>
     </target>
 </project>
