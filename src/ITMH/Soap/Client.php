@@ -600,8 +600,6 @@ class Client extends SoapClient
         }
 
         if (is_array($obj)) {
-            codecept_debug($obj);
-
             return $this->mapArray($obj, $className, $classMap, $classNamespace);
         }
 
