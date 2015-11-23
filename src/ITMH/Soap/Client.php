@@ -594,7 +594,6 @@ class Client extends SoapClient
         $classMap = array(),
         $classNamespace = ''
     ) {
-
         if (!$this->isComplex($obj)) {
             return $obj;
         }
@@ -616,10 +615,16 @@ class Client extends SoapClient
         // Map remote object to local object.
         $arrObj = get_object_vars($obj);
         $propertiesMap = $this->getPropertyMap($objInstance);
+
         foreach ($arrObj as $key => $val) {
             if ($val !== null) {
                 if (array_key_exists($key, $propertiesMap)) {
                     $key = $propertiesMap[$key];
+                }
+
+                // If it's not scalar, recursive call the mapping function
+                if ($this->isComplex($val)) {
+                    $val = $this->mapObject($val, $key, $classMap, $classNamespace);
                 }
 
                 $useSetter = $this->hasSetter($key, $objMethods);
@@ -627,10 +632,6 @@ class Client extends SoapClient
                     throw new InvalidClassMappingException('Property "' . $mappedClassName . '::' . $key . '" doesn\'t exist');
                 }
 
-                // If it's not scalar, recursive call the mapping function
-                if ($this->isComplex($val)) {
-                    $val = $this->mapObject($val, $key, $classMap, $classNamespace);
-                }
 
                 // If there is a setter, use it. If not, set the property directly.
                 if ($useSetter) {
@@ -676,28 +677,22 @@ class Client extends SoapClient
     /**
      * Get mapped class name
      *
-     * @param string $className      Root (or current) class name
-     * @param array  $classMap       Class Mapping
-     * @param string $classNamespace Namespace where the local classes are located
+     * @param string $className Root (or current) class name
+     * @param array  $classMap  Class Mapping
      *
      * @return mixed
-     * @throws \ITMH\Soap\Exception\MissingClassMappingException
      * @throws \ITMH\Soap\Exception\InvalidClassMappingException
      */
-    protected function getMappedClassName($className, $classMap, $classNamespace = null)
+    protected function getMappedClassName($className, $classMap)
     {
         if (array_key_exists($className, $classMap)) {
             $mappedClassName = $classMap[$className];
         } else {
-            if (!$classNamespace) {
-                throw new MissingClassMappingException('Missing mapping for element "' . $className . '"');
-            }
-
-            $mappedClassName = str_replace('\\\\', '\\', $classNamespace . '\\' . $className);
+            $mappedClassName = 'stdClass';
         }
 
         // Existence
-        $this->checkClassExistence($className);
+        $this->checkClassExistence($mappedClassName);
 
         return $mappedClassName;
     }
@@ -877,7 +872,7 @@ class Client extends SoapClient
      */
     protected function getSetterName($key)
     {
-        return 'set' . $key;
+        return 'set' . ucfirst($key);
     }
 
     /**

@@ -3,7 +3,7 @@
 namespace ITMH\Soap;
 
 
-interface MappingInterface
+interface MappableInterface
 {
     /**
      * Return attributes map
