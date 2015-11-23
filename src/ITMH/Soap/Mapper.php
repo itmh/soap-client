@@ -6,8 +6,7 @@ namespace ITMH\Soap;
 use ITMH\Soap\Exception\InvalidClassMappingException;
 use ITMH\Soap\Exception\InvalidParameterException;
 use ITMH\Soap\Exception\MissingItemException;
-use ITMH\Soap\Exception\MissingRootException;
-use ITMH\Soap\MappingInterface;
+use ITMH\Soap\Exception\UnwrappingException;
 
 class Mapper
 {
@@ -16,16 +15,12 @@ class Mapper
      *
      * @var array
      */
-    protected $config = [];
+    protected $config;
 
     /**
      * Сеттер для конфигурации
      *
-     * @param array $config Конфигурация маппинга
-     *
-     * @return void
-     *
-     * @codeCoverageIgnore Не содержит логики
+     * @param array $config
      */
     public function setConfig(array $config)
     {
@@ -35,8 +30,8 @@ class Mapper
     /**
      * Разворачивает запрос если указан корневой элемент и осуществляет маппинг, если указан класс
      *
-     * @param string $method Имя метода
-     * @param mixed  $data   Soap ответ
+     * @param $method
+     * @param $data
      *
      * @return array|mixed
      * @throws \ITMH\Soap\Exception\InvalidParameterException
@@ -44,21 +39,17 @@ class Mapper
      */
     public function mapMethodResponse($method, $data)
     {
+        $data = $this->unwrapItem($data);
         if (!$this->isMapMethod($method)) {
             return $data;
         }
 
-        $root = $this->getRootName($method);
-        if (!empty($root)) {
-            $data = $this->unwrapItem($root, $data);
-        }
-
-        $class = $this->getMappingClass($method);
+        $class = $this->getTargetClass($method);
         if (empty($class)) {
             return $data;
         }
 
-        return $this->mapData($data, $class, $this->getItemName($method));
+        return $this->mapData($data, $class, $method);
     }
 
     /**
@@ -66,43 +57,25 @@ class Mapper
      *
      * @param mixed  $data     Данные для маппинга
      * @param string $class    Полное имя класса для маппинга
-     * @param null   $itemName Имя ноды в которой находятся данные для маппинга
+     * @param string $method   Имя ноды в которой находятся данные для маппинга
      *
      * @return array|mixed
      * @throws \ITMH\Soap\Exception\MissingItemException
-     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
-     * @throws \ITMH\Soap\Exception\InvalidParameterException
      */
-    public function mapData($data, $class, $itemName = null)
+    public function mapData($data, $class, $method)
     {
-        if (!$this->isComplex($data)) {
-            return $data;
-        }
-
         if (is_array($data)) {
             $result = [];
             foreach ($data as $item) {
-                $result[] = $this->mapObject($this->unwrapItem($itemName, $item), $class);
+                $result[] = $this->mapObject($item, $class, $method);
             }
         }
 
         if (is_object($data)) {
-            $result = $this->mapObject($this->unwrapItem($itemName, $data), $class);
+            $result = $this->mapObject($data, $class, $method);
         }
 
         return $result;
-    }
-
-    /**
-     * Проверяет является ли переменная массивом или объектом
-     *
-     * @param mixed $data Данные
-     *
-     * @return bool
-     */
-    public function isComplex($data)
-    {
-        return is_array($data) || is_object($data);
     }
 
 
@@ -110,20 +83,29 @@ class Mapper
      * Производит маппинг атрибутов объекта учитывая карту атрибута,
      * если класс имплементирует интерфейс MappingInterface
      *
-     * @param mixed  $object Объект
-     * @param string $class  Имя класса в который будет производиться маппинг
+     * @param $object
+     * @param $class
+     * @param $method
      *
      * @return mixed
      * @throws \ITMH\Soap\Exception\InvalidClassMappingException
+     * @throws \ITMH\Soap\Exception\MissingItemException
      */
-    protected function mapObject($object, $class)
+    protected function mapObject($object, $class, $method)
     {
         $objectProperties = get_object_vars($object);
+        $mappedObjectMethods = get_class_methods($class);
+
+        $source = $this->getSource($method);
+
+        if (!empty($source) && isset($object->$source)) {
+            return $this->mapData($object->$source, $class, $method);
+        }
 
         $map = [];
         $this->checkClassExistence($class);
         $mappedObject = new $class();
-        if ($mappedObject instanceof MappingInterface) {
+        if ($mappedObject instanceof MappableInterface) {
             $map = $mappedObject->getMap();
         }
 
@@ -132,7 +114,15 @@ class Mapper
                 $key = $map[$key];
             }
 
-            $mappedObject->$key = $value;
+            $setterName = $this->getSetterName($key);
+            $useSetter = $this->hasMethod($setterName, $mappedObjectMethods);
+
+            if ($useSetter) {
+                $mappedObject->$setterName($value);
+            } else {
+                $mappedObject->$key = $value;
+            }
+
         }
 
         return $mappedObject;
@@ -147,11 +137,22 @@ class Mapper
      * @return mixed
      * @throws \ITMH\Soap\Exception\InvalidParameterException
      * @throws \ITMH\Soap\Exception\MissingItemException
+     * @throws \ITMH\Soap\Exception\UnwrappingException
      */
-    public function unwrapItem($itemName, $data)
+    public function unwrapItem($data, $itemName = null)
     {
         if (!is_object($data)) {
             throw new InvalidParameterException('Response is not object');
+        }
+
+        if (empty($itemName)) {
+            $keys = array_keys(get_object_vars($data));
+            if (count($keys) === 1) {
+                $rootClassName = reset($keys);
+                return $data->$rootClassName;
+            }
+
+            throw new UnwrappingException('Object has more than one key');
         }
 
         if (!isset($data->$itemName)) {
@@ -162,45 +163,39 @@ class Mapper
     }
 
     /**
-     * Метод для получения ключа конфигурации root для данного метода
+     * Метод для получения ключа конфигурации asArray для данного метода
      *
      * @param string $method Имя метода
      *
      * @return string
-     *
-     * @codeCoverageIgnore Не содержит логики
      */
-    protected function getRootName($method)
+    protected function getAsArray($method)
     {
-        return $this->getMethodConfigKey($method, 'root');
+        return $this->getMethodConfigKey($method, 'asArray');
     }
 
     /**
-     * Метод для получения ключа конфигурации item для данного метода
+     * Метод для получения ключа конфигурации source для данного метода
      *
      * @param string $method Имя метода
      *
      * @return string
-     *
-     * @codeCoverageIgnore Не содержит логики
      */
-    protected function getItemName($method)
+    protected function getSource($method)
     {
-        return $this->getMethodConfigKey($method, 'item');
+        return $this->getMethodConfigKey($method, 'source');
     }
 
     /**
-     * Метод для получения ключа конфигурации class для данного метода
+     * Метод для получения ключа конфигурации Target для данного метода
      *
      * @param string $method Имя метода
      *
      * @return string
-     *
-     * @codeCoverageIgnore Не содержит логики
      */
-    protected function getMappingClass($method)
+    protected function getTargetClass($method)
     {
-        return $this->getMethodConfigKey($method, 'class');
+        return $this->getMethodConfigKey($method, 'target');
     }
 
     /**
@@ -233,9 +228,36 @@ class Mapper
     }
 
     /**
-     * Check class existence
+     * Проверяет существование метода в списке методов
      *
-     * @param string $className Class name
+     * @param string $method        Имя метода
+     * @param array  $objectMethods Список методов объекта
+     *
+     * @return bool
+     */
+    protected function hasMethod($method, $objectMethods)
+    {
+        return in_array($method, $objectMethods, true);
+    }
+
+    /**
+     * Получает имя сеттера
+     *
+     * @param string $attribute Имя атрибута
+     *
+     * @return string
+     *
+     * @codeCoverageIgnore Не содержит логики
+     */
+    protected function getSetterName($attribute)
+    {
+        return 'set' . ucfirst($attribute);
+    }
+
+    /**
+     * Проверяет существование класса
+     *
+     * @param string $className Имя класса
      *
      * @return void
      * @throws \ITMH\Soap\Exception\InvalidClassMappingException
