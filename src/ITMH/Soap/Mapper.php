@@ -45,7 +45,7 @@ class Mapper
         }
 
         if (empty($data) || $this->isEmptyObject($data)) {
-            return null;
+            return $this->isAsArray($method) ? [] : null;
         }
 
         $class = $this->getTargetClass($method);
@@ -53,7 +53,8 @@ class Mapper
             return $data;
         }
 
-        return $this->mapData($data, $class, $method);
+        $data = $this->mapData($data, $class, $method);
+        return $this->isAsArray($method) ? $this->toArray($data) : $data;
     }
 
     /**
@@ -65,9 +66,11 @@ class Mapper
      *
      * @return array|mixed
      * @throws \ITMH\Soap\Exception\MissingItemException
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
      */
     public function mapData($data, $class, $method)
     {
+        $result = '';
         if (is_array($data)) {
             $result = [];
             foreach ($data as $item) {
@@ -172,11 +175,11 @@ class Mapper
      *
      * @param string $method Имя метода
      *
-     * @return string
+     * @return bool
      */
-    protected function getAsArray($method)
+    protected function isAsArray($method)
     {
-        return $this->getMethodConfigKey($method, 'asArray');
+        return (bool)$this->getMethodConfigKey($method, 'asArray');
     }
 
     /**
@@ -291,5 +294,21 @@ class Mapper
         }
 
         return false;
+    }
+
+    /**
+     * Оборачивает данные в массив, если они не являются массивом
+     *
+     * @param mixed $data Данные
+     *
+     * @return array
+     */
+    protected function toArray($data)
+    {
+        if (empty($data)) {
+            return [];
+        }
+
+        return is_array($data) ? $data : [$data];
     }
 }
