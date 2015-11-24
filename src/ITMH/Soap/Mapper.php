@@ -30,8 +30,8 @@ class Mapper
     /**
      * Разворачивает запрос если указан корневой элемент и осуществляет маппинг, если указан класс
      *
-     * @param $method
-     * @param $data
+     * @param string $method Имя метода
+     * @param mixed  $data   Данные
      *
      * @return array|mixed
      * @throws \ITMH\Soap\Exception\InvalidParameterException
@@ -44,26 +44,33 @@ class Mapper
             return $data;
         }
 
+        if (empty($data) || $this->isEmptyObject($data)) {
+            return $this->isAsArray($method) ? [] : null;
+        }
+
         $class = $this->getTargetClass($method);
         if (empty($class)) {
             return $data;
         }
 
-        return $this->mapData($data, $class, $method);
+        $data = $this->mapData($data, $class, $method);
+        return $this->isAsArray($method) ? $this->toArray($data) : $data;
     }
 
     /**
      * Производит маппинг данных в объект
      *
-     * @param mixed  $data     Данные для маппинга
-     * @param string $class    Полное имя класса для маппинга
-     * @param string $method   Имя ноды в которой находятся данные для маппинга
+     * @param mixed  $data   Данные для маппинга
+     * @param string $class  Полное имя класса для маппинга
+     * @param string $method Имя ноды в которой находятся данные для маппинга
      *
      * @return array|mixed
      * @throws \ITMH\Soap\Exception\MissingItemException
+     * @throws \ITMH\Soap\Exception\InvalidClassMappingException
      */
     public function mapData($data, $class, $method)
     {
+        $result = '';
         if (is_array($data)) {
             $result = [];
             foreach ($data as $item) {
@@ -83,9 +90,9 @@ class Mapper
      * Производит маппинг атрибутов объекта учитывая карту атрибута,
      * если класс имплементирует интерфейс MappingInterface
      *
-     * @param $object
-     * @param $class
-     * @param $method
+     * @param mixed  $object Объект с данными
+     * @param string $class  Имя класса
+     * @param string $method Имя метода
      *
      * @return mixed
      * @throws \ITMH\Soap\Exception\InvalidClassMappingException
@@ -149,6 +156,7 @@ class Mapper
             $keys = array_keys(get_object_vars($data));
             if (count($keys) === 1) {
                 $rootClassName = reset($keys);
+
                 return $data->$rootClassName;
             }
 
@@ -167,11 +175,11 @@ class Mapper
      *
      * @param string $method Имя метода
      *
-     * @return string
+     * @return bool
      */
-    protected function getAsArray($method)
+    protected function isAsArray($method)
     {
-        return $this->getMethodConfigKey($method, 'asArray');
+        return (bool)$this->getMethodConfigKey($method, 'asArray');
     }
 
     /**
@@ -267,5 +275,40 @@ class Mapper
         if (!class_exists($className)) {
             throw new InvalidClassMappingException('Class not found: "' . $className . '"');
         }
+    }
+
+    /**
+     * Проверяет есть ли у объекта какие-либо публичные свойства
+     *
+     * @param mixed $object Объект
+     *
+     * @return bool
+     */
+    protected function isEmptyObject($object)
+    {
+        if (is_object($object)) {
+            $vars = get_object_vars($object);
+            if (count($vars) === 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Оборачивает данные в массив, если они не являются массивом
+     *
+     * @param mixed $data Данные
+     *
+     * @return array
+     */
+    protected function toArray($data)
+    {
+        if (empty($data)) {
+            return [];
+        }
+
+        return is_array($data) ? $data : [$data];
     }
 }
