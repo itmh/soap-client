@@ -44,6 +44,10 @@ class Mapper
             return $data;
         }
 
+        if ($this->isEmptyObject($data)) {
+            return null;
+        }
+
         $class = $this->getTargetClass($method);
         if (empty($class)) {
             return $data;
@@ -267,5 +271,23 @@ class Mapper
         if (!class_exists($className)) {
             throw new InvalidClassMappingException('Class not found: "' . $className . '"');
         }
+    }
+
+    /**
+     * Проверяет есть ли у объекта какие-либо публичные свойства
+     *
+     * @param $object
+     *
+     * @return bool
+     */
+    protected function isEmptyObject($object) {
+        if (is_object($object)) {
+            $vars = get_object_vars($object);
+            if(count($vars) === 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
