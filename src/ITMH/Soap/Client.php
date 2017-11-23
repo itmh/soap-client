@@ -5,7 +5,6 @@ namespace ITMH\Soap;
 use ITMH\Soap\Exception\ConnectionErrorException;
 use ITMH\Soap\Exception\InvalidClassMappingException;
 use ITMH\Soap\Exception\InvalidParameterException;
-use ITMH\Soap\Exception\MissingClassMappingException;
 use SoapClient;
 
 /**
@@ -759,7 +758,7 @@ class Client extends SoapClient
      */
     protected function getPropertyMap($object)
     {
-        return $object instanceof MappingInterface ? $object->getMap() : [];
+        return $object instanceof MappableInterface ? $object->getMap() : [];
     }
 
     /**

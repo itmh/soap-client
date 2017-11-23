@@ -111,9 +111,9 @@ class SoapClientTest extends \Codeception\TestCase\Test
      */
     public function providerGetPropertyMap()
     {
-        $mapper = $this->getMock('\\ITMH\\Soap\\MappingInterface');
+        $mapper = $this->getMock('\\ITMH\\Soap\\MappableInterface');
         $mapper->method('getMap')->willReturn(['foo' => 'bar']);
-        /* @var \ITMH\Soap\MappingInterface $mapper */
+        /* @var \ITMH\Soap\MappableInterface $mapper */
 
         return [
             'when object is instance of MappnigInterface than return getMap' => [
@@ -242,7 +242,7 @@ class SoapClientTest extends \Codeception\TestCase\Test
             ],
             'when class is not in classmap than return class concatenated with namespace' => [
                 ['SomeClass', [], 'Namespace'],
-                'Namespace\\SomeClass'
+                'stdClass'
             ],
         ];
     }
@@ -261,8 +261,8 @@ class SoapClientTest extends \Codeception\TestCase\Test
         $method = self::getMethod('getMappedClassName');
         $object = Stub::make(self::CLASS_NAME);
 
-        $data = ['SomeClass', []];
-        self::setExpectedException('\ITMH\Soap\Exception\MissingClassMappingException');
+        $data = ['SomeClass', ['SomeClass' => 'NotExistedClass']];
+        self::setExpectedException('\ITMH\Soap\Exception\InvalidClassMappingException');
         $method->invokeArgs($object, $data);
     }
 
@@ -947,6 +947,48 @@ class SoapClientTest extends \Codeception\TestCase\Test
                     ]
                 ),
                 new DateTime('2012-01-01')
+            ]
+        ];
+    }
+
+    /**
+     * Test for method parseCurlResponse
+     *
+     * ./vendor/bin/codecept run unit SoapClientTest.php:testParseCurlResponse
+     *
+     * @param array $expected Expected result
+     * @param array $args     Method attributes
+     *
+     * @return void
+     *
+     * @covers       \ITMH\Soap\Client::parseCurlResponse
+     * @dataProvider providerParseCurlResponse
+     */
+    public function testParseCurlResponse($expected, $args)
+    {
+        $method = self::getMethod('parseCurlResponse');
+        $client = $this->getMockBuilder(self::CLASS_NAME)
+            ->disableOriginalConstructor()
+            ->setMethods(null)
+            ->getMock();
+
+        self::assertEquals($expected, $method->invokeArgs($client, [$args]));
+    }
+
+    /**
+     * Data provider for testParseCurlResponse
+     *
+     * @return array
+     */
+    public function providerParseCurlResponse()
+    {
+        return [
+            'when body contains HTTP header then separate header and body' => [
+                [
+                    'header' => "HTTP/1.1 200 OK\r\nCache-Control: private, max-age=0\r\nContent-Length: 61936\r\n\r\n",
+                    'body'   => "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><DemandHistoryResponse xmlns=\"http://api.ris.itmh.local/B2CRegress/\"><Mem> 46.48.112.193 - - [01/Sep/2013:15:08:47 +0200] \"POST wp-login.php HTTP/1.0\" 301 555 \"referer-domain.tld\" \"Mozilla/5.0 (Windows NT 6.1; rv:19.0) Gecko/20130101 Firefox/19.0\"\r\n\r\n</Mem></DemandHistoryResponse></soap:Body></soap:Envelope>"
+                ],
+                "HTTP/1.1 200 OK\r\nCache-Control: private, max-age=0\r\nContent-Length: 61936\r\n\r\n<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://www.w3.org/2003/05/soap-envelope\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><DemandHistoryResponse xmlns=\"http://api.ris.itmh.local/B2CRegress/\"><Mem> 46.48.112.193 - - [01/Sep/2013:15:08:47 +0200] \"POST wp-login.php HTTP/1.0\" 301 555 \"referer-domain.tld\" \"Mozilla/5.0 (Windows NT 6.1; rv:19.0) Gecko/20130101 Firefox/19.0\"\r\n\r\n</Mem></DemandHistoryResponse></soap:Body></soap:Envelope>"
             ]
         ];
     }
