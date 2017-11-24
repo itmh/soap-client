@@ -15,7 +15,7 @@ class Mapper
      *
      * @var array
      */
-    protected $config;
+    protected $config = array();
 
     /**
      * Сеттер для конфигурации
