@@ -30,50 +30,6 @@ class MapperTest extends \Codeception\TestCase\Test
     }
 
     /**
-     * Test for isComplex method
-     *
-     * ./vendor/bin/codecept run unit MapperTest.php:testIsComplex
-     *
-     * @param mixed $data     Method arguments
-     * @param bool  $expected Expected result
-     *
-     * @return void
-     *
-     * @covers       \ITMH\Soap\Mapper::isComplex
-     * @dataProvider providerIsComplex
-     */
-    public function testIsComplex($data, $expected)
-    {
-        $method = self::getMethod('isComplex');
-        $object = Stub::make(self::CLASS_NAME);
-        self::assertEquals($expected, $method->invokeArgs($object, [$data]));
-    }
-
-    /**
-     * DataProvider for testIsComplex
-     *
-     * @return array
-     */
-    public function providerIsComplex()
-    {
-        return [
-            'when data is not array or object than return false' => [
-                'string',
-                false
-            ],
-            'when data is array than return true' => [
-                [],
-                true
-            ],
-            'when data is object than return true' => [
-                new stdClass(),
-                true
-            ],
-        ];
-    }
-
-
-    /**
      * Test for checkClassExistence method
      *
      * ./vendor/bin/codecept run unit MapperTest.php:testCheckClassExistenceWhenClassNotExistsThanThrowError
@@ -187,7 +143,7 @@ class MapperTest extends \Codeception\TestCase\Test
 
         $method = self::getMethod('unwrapItem');
         self::setExpectedException('ITMH\Soap\Exception\MissingItemException');
-        $method->invokeArgs($mapper, ['anotherItem', $data]);
+        $method->invokeArgs($mapper, [$data, 'anotherItem']);
 
         self::assertEquals('value', $method->invokeArgs($mapper, ['item', $data]));
     }
@@ -207,36 +163,6 @@ class MapperTest extends \Codeception\TestCase\Test
         $data = (object)['item' => 'value'];
 
         $method = self::getMethod('unwrapItem');
-        self::assertEquals('value', $method->invokeArgs($mapper, ['item', $data]));
-    }
-
-
-    /**
-     * Test for testMapMethodResponse method success result
-     *
-     * ./vendor/bin/codecept run unit MapperTest.php:testMapMethodResponse
-     *
-     * @return void
-     *
-     * @covers       \ITMH\Soap\Mapper::mapMethodResponse
-     */
-    public function testMapMethodResponse()
-    {
-        $mapper = Stub::make(
-            '\ITMH\Soap\Mapper',
-            [
-                'mapData' => Stub::atLeastOnce(),
-                'unwrapItem' => Stub::atLeastOnce()
-            ]
-        );
-        /* @var \ITMH\Soap\Mapper $mapper */
-
-        self::assertEquals([], $mapper->mapMethodResponse('method', []));
-
-        $mapper->setConfig(['method' => ['root' => 'ClassName']]);
-        $mapper->mapMethodResponse('method', new stdClass());
-
-        $mapper->setConfig(['method' => ['class' => 'ClassName']]);
-        $mapper->mapMethodResponse('method', new stdClass());
+        self::assertEquals('value', $method->invokeArgs($mapper, [$data, 'item']));
     }
 }
