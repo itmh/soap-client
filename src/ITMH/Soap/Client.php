@@ -641,8 +641,8 @@ class Client extends SoapClient
     protected function parseCurlResponse($response)
     {
         $pattern = '|HTTP/\d\.\d.*?$.*?\r\n\r\n|ims';
-        preg_match_all($pattern, $response, $matches);
-        $header = array_pop($matches[0]);
+        preg_match($pattern, $response, $matches);
+        $header = $matches[0];
         # Remove headers from the response body
         $body = str_replace($header, '', $response);
 
